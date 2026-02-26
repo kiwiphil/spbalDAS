@@ -1,0 +1,22 @@
+url: ~
+template:
+  bootstrap: 5
+reference:
+- title: spbalDAS
+- subtitle: Spatial Functions
+  desc: User callable spatial design functions.
+- contents:
+  - starts_with("HIP")
+  - starts_with("DAS")
+  - starts_with("HaltonFrame")
+  - starts_with("cpp")
+  - starts_with("BoundingBox")
+  - starts_with("SolveLinearAssignment")
+  - starts_with("hello")
+  - starts_with("rSBMoranIvec")
+- subtitle: Support Functions
+  desc: User callable support functions.
+- contents:
+  - starts_with("SRS")
+  - starts_with("get")
+

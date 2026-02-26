@@ -1,0 +1,31 @@
+Package: spbalDAS
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Author: Who wrote it
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports:
+    units,
+    sf,
+    Rcpp (>= 1.0.0),
+    RcppArmadillo
+LinkingTo:
+    Rcpp,
+    RcppArmadillo,
+    RcppHungarian
+LazyData: true
+RoxygenNote: 7.3.3
+SystemRequirements: C++17
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    bookdown,
+    ggplot2,
+    gridExtra
+VignetteBuilder: knitr
+Config/testthat/edition: 3
