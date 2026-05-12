@@ -9,7 +9,7 @@ SolveLinearAssignment(SampleMatrix, W, verbose = FALSE)
 \arguments{
 \item{SampleMatrix}{Population points.}
 
-\item{W}{Sample size.}
+\item{W}{Weight matrix.}
 
 \item{verbose}{Boolean if you want to see any output printed to screen. Helpful if taking a
 long time. Default is FALSE i.e. no informational messages are displayed.}

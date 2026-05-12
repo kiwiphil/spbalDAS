@@ -1,10 +1,7 @@
 exportPattern("^[[:alpha:]]+")
 
-export(hungarian_arma)
-export(DAS_cpp)
 export(arma_dist_al)
-export(SBMoranIvec)
-
+export(native_lapjv)
 import(Rcpp)
 import(RcppArmadillo)
 

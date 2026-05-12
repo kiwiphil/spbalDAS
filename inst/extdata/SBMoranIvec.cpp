@@ -15,7 +15,7 @@
  //'
  //' @return Numeric vector of length(A) with the spread measure for each candidate
  // [[Rcpp::export]]
- Rcpp::NumericVector SBMoranIvec(Rcpp::IntegerVector C,
+ Rcpp::NumericVector xxxSBMoranIvec(Rcpp::IntegerVector C,
                                  Rcpp::IntegerVector A,
                                  Rcpp::NumericMatrix W) {
 

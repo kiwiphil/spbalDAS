@@ -1,7 +1,0 @@
-CXX_STD=CXX17
-CXX17FLAGS += -O3 -Wall -mtune=native -march=native
-CXX17FLAGS +=-I'/home/phil/R/x86_64-pc-linux-gnu-library/4.5/RcppArmadillo/include'
-CXX17FLAGS +=-I'/home/phil/R/x86_64-pc-linux-gnu-library/4.5/RcppHungarian/include'
-CXX17FLAGS +=-I'/home/phil/R/x86_64-pc-linux-gnu-library/4.5/RcppThread/include'
-PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
-PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

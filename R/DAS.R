@@ -3,17 +3,24 @@
 #'
 #' @title Dynamic Assignment Sampling (DAS).
 #'
-#' @description DAS
+#' @description DAS draws spatially balanced samples from areal resources. Needs updating!
 #'
-#' @author This function was first written by Blair Robertson in Matlab and later re-written in R by Phil Davies.
+#' @author This function was first written by Blair Robertson in Matlab and later re-written
+#' in R/C++ by Phil Davies.
 #'
-#' @param pop Population points.
-#' @param n Sample size.
+#' @param pop Population point pairs. What data types will be supported?
+#' @param n The number of sample points to draw from the population.
+#' @param J1 maximum number of candidate samples 2<= J1 <= [N/2].
+#' @param n_threads The number of threads to use, when calculation the cost matrix, a value of 0
+#' will result in a thread being dispatched on each available logical CPU. The default is n_threads=1.
+#' This parameter takes affect only when the current J value is greater than or equal to 256 and
+#' n_threads is greater than 1.
 #' @param verbose Boolean if you want to see any output printed to screen. Helpful if taking a
 #' long time. Default is FALSE i.e. no informational messages are displayed.
 #'
 #' @return A list containing one variable, \code{$SampleMatrix} Jn by n matrix containing
-#'  population indices, where each row is a candidate sample.
+#' population indices, where each row is a candidate sample. I could also return the cost
+#' and pairs.
 #'
 
 #' @examples
@@ -32,9 +39,16 @@
 DAS <- function(pop,
                 n,
                 J1,
+                n_threads = 1,
                 verbose = FALSE){
 
   options(digits.secs = 3)
+
+  if (verbose){
+    current_time <- Sys.time()
+    timestamp_message <- paste(format(current_time, "[%Y-%m-%d %H:%M:%OS3]"), " Starting...")
+    message(timestamp_message)
+  }
 
   # Validate parameters.
   #xvalidate_parameters("pop", pop) # ensure pop values are all numeric.
@@ -55,49 +69,56 @@ DAS <- function(pop,
   if(verbose){message(SampleMatrix[1:20])}
 
 
-  # Compute weight matrix - this takes a fair chunk of time.
-  # arma_dist_al is in cppLAP.cpp
+  # Compute weight matrix - this can take a fair chunk of time.
   W <- 1. / as.matrix(arma_dist_al(pop))
-  #W <- 1. / as.matrix(dist_al(pop))
-  current_time <- Sys.time()
-  timestamp_message <- paste(format(current_time, "[%Y-%m-%d %H:%M:%OS3]"), " After arma_dist_al")
-  print(timestamp_message)
-  W[is.infinite(W)] <- 0
-  if (verbose){message(W)}
 
-  for (i in 2:n) {
-    message('2:n')
-    # Define Ci and Ai
-    r <- sample(J[i-1])
-    Ci <- SampleMatrix[r[1:J[i]], , drop = FALSE]
-    OmegaNotCi <- setdiff(1:N, as.vector(Ci))
-    # Draw an SRS of Ji units from U, denoted Ai={a1,...,aji}
-    r <- sample(length(OmegaNotCi))
-    Ai <- OmegaNotCi[r[1:J[i]]]
-
-    CAi <- cbind(Ci, Ai)
-
-    if(!is.numeric(Ci)){
-      message(Ci)
-      base::stop(base::c("spbal(DAS) Ci not numeric."))
-    }
-    if(!is.numeric(Ai)){
-      message(Ai)
-      base::stop(base::c("spbal(DAS) Ai not numeric."))
-    }
-    # Linear Assignment (assign Ai to Ci)
-    # Solve assignment problem to find the optimal permutation sigma of {1,...,Ji}
-    result <- SolveLinearAssignment(CAi, W, verbose)
-    SampleMatrix <- result #$SampleMatrix
-
-    # Update J, the number of points in C_i+1 and A_i+1
-    JJ <- max(1, min(J[i], floor(N / (i + 1))))
-    J <- c(J, JJ)
+  if (verbose){
+    current_time <- Sys.time()
+    timestamp_message <- paste(format(current_time, "[%Y-%m-%d %H:%M:%OS3]"), " After arma_dist_al")
+    message(timestamp_message)
   }
 
-  current_time <- Sys.time()
-  timestamp_message <- paste(format(current_time, "[%Y-%m-%d %H:%M:%OS3]"), " Exiting...")
-  print(timestamp_message)
+  W[is.infinite(W)] <- 0
+  #if (verbose){message(W)}
+
+  # this:
+  SampleMatrix <- LinearAssignmentProblem_cpp(W, n, N, J[1], n_threads = 6, verbose = FALSE)
+  # replaces this:
+  #for (i in 2:n) {
+  #  message('2:n')
+    # Define Ci and Ai
+  #  r <- sample(J[i-1])
+  #  Ci <- SampleMatrix[r[1:J[i]], , drop = FALSE]
+  #  OmegaNotCi <- setdiff(1:N, as.vector(Ci))
+    # Draw an SRS of Ji units from U, denoted Ai={a1,...,aji}
+  #  r <- sample(length(OmegaNotCi))
+  #  Ai <- OmegaNotCi[r[1:J[i]]]
+
+  #  CAi <- cbind(Ci, Ai)
+
+   # if(!is.numeric(Ci)){
+    #  message(Ci)
+    #  base::stop(base::c("spbal(DAS) Ci not numeric."))
+    #}
+    #if(!is.numeric(Ai)){
+    #  message(Ai)
+    #  base::stop(base::c("spbal(DAS) Ai not numeric."))
+    #}
+    # Linear Assignment (assign Ai to Ci)
+    # Solve assignment problem to find the optimal permutation sigma of {1,...,Ji}
+    #result <- SolveLinearAssignment(CAi, W, verbose)
+    #SampleMatrix <- result #$SampleMatrix
+
+    # Update J, the number of points in C_i+1 and A_i+1
+    #JJ <- max(1, min(J[i], floor(N / (i + 1))))
+    #J <- c(J, JJ)
+  #}
+
+  if (verbose){
+    current_time <- Sys.time()
+    timestamp_message <- paste(format(current_time, "[%Y-%m-%d %H:%M:%OS3]"), " Exiting DAS()...")
+    message(timestamp_message)
+  }
 
   # assign the spbal attribute to the sample being returned, i.e. the function that created it.
   base::attr(sample, "spbal") <- "DAS"
@@ -148,7 +169,8 @@ SolveLinearAssignment <- function(SampleMatrix, W, verbose = FALSE) {
   timestamp_message <- paste(format(current_time, "[%Y-%m-%d %H:%M:%OS3]"), " calling h_arma")
   print(timestamp_message)
 
-  result = hungarian_arma(C)
+  #result = hungarian_arma(C)
+  result = my_hungarian(C)
 
   current_time <- Sys.time()
   timestamp_message <- paste(format(current_time, "[%Y-%m-%d %H:%M:%OS3]"), " back from h_arma")

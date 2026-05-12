@@ -7,19 +7,23 @@
 rSBMoranIvec(C, A, W)
 }
 \arguments{
-\item{C}{Population points.}
+\item{C}{bla.}
 
-\item{A}{Sample size.}
+\item{A}{bla.}
 
-\item{W}{Boolean if you want to see any output printed to screen. Helpful if taking a
-long time. Default is FALSE i.e. no informational messages are displayed.}
+\item{W}{bla.}
 }
 \value{
-A list containing one variable, \code{$SampleMatrix} Jn by n matrix containing
- population indices, where each row is a candidate sample.
+To be filled in.
 }
 \description{
-rSBMoranIvec
+Moran’s I is a measure of spatial autocorrelation–how related the values of a variable are based
+on the locations where they were measured.
+To calculate Moran’s I, we will need to generate a matrix of inverse distance weights.
+In the matrix, entries for pairs of points that are close together are higher than for pairs of points that are far apart.
+For simplicity, we will treat the latitude and longitude as values on a plane rather than on a sphere–our locations are
+close together and far from the poles. When using latitude and longitude coordinates from more distant locations,
+it’s wise to calculate distances based on spherical coordinates (the geosphere package can be used).
 }
 \author{
 This function was first written by Blair Robertson in Matlab and later re-written in R by Phil Davies.

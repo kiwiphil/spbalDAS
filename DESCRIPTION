@@ -12,11 +12,13 @@ Imports:
     units,
     sf,
     Rcpp (>= 1.0.0),
-    RcppArmadillo
+    RcppArmadillo,
+    TreeDist
 LinkingTo:
     Rcpp,
     RcppArmadillo,
-    RcppHungarian
+    RcppHungarian,
+    RcppThread
 LazyData: true
 RoxygenNote: 7.3.3
 SystemRequirements: C++17

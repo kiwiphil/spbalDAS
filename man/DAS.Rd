@@ -4,22 +4,30 @@
 \alias{DAS}
 \title{Dynamic Assignment Sampling (DAS).}
 \usage{
-DAS(pop, n, verbose = FALSE)
+DAS(pop, n, J1, n_threads = 1, verbose = FALSE)
 }
 \arguments{
-\item{pop}{Population points.}
+\item{pop}{Population point pairs. What data types will be supported?}
 
-\item{n}{Sample size.}
+\item{n}{The number of sample points to draw from the population.}
+
+\item{J1}{maximum number of candidate samples 2<= J1 <= [N/2].}
+
+\item{n_threads}{The number of threads to use, when calculation the cost matrix, a value of 0
+will result in a thread being dispatched on each available logical CPU. The default is n_threads=1.
+This parameter takes affect only when the current J value is greater than or equal to 256 and
+n_threads is greater than 1.}
 
 \item{verbose}{Boolean if you want to see any output printed to screen. Helpful if taking a
 long time. Default is FALSE i.e. no informational messages are displayed.}
 }
 \value{
 A list containing one variable, \code{$SampleMatrix} Jn by n matrix containing
- population indices, where each row is a candidate sample.
+population indices, where each row is a candidate sample. I could also return the cost
+and pairs.
 }
 \description{
-DAS
+DAS draws spatially balanced samples from areal resources. Needs updating!
 }
 \examples{
 # DAS sample ----------------------------------------------
@@ -33,5 +41,6 @@ sampMx[1:20]
 
 }
 \author{
-This function was first written by Blair Robertson in Matlab and later re-written in R by Phil Davies.
+This function was first written by Blair Robertson in Matlab and later re-written
+in R/C++ by Phil Davies.
 }

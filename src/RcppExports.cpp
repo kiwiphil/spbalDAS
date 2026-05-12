@@ -2,6 +2,7 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include <RcppArmadillo.h>
+#include <RcppThread.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
@@ -11,59 +12,46 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// native_lapjv
+Rcpp::List native_lapjv(Rcpp::NumericMatrix Cost_R);
+RcppExport SEXP _spbalDAS_native_lapjv(SEXP Cost_RSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type Cost_R(Cost_RSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_lapjv(Cost_R));
+    return rcpp_result_gen;
+END_RCPP
+}
+// LinearAssignmentProblem_cpp
+Rcpp::IntegerMatrix LinearAssignmentProblem_cpp(Rcpp::NumericMatrix W_R, arma::uword target_n, arma::uword N, arma::uword initial_J, int n_threads, bool verbose);
+RcppExport SEXP _spbalDAS_LinearAssignmentProblem_cpp(SEXP W_RSEXP, SEXP target_nSEXP, SEXP NSEXP, SEXP initial_JSEXP, SEXP n_threadsSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type W_R(W_RSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type target_n(target_nSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type N(NSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type initial_J(initial_JSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(LinearAssignmentProblem_cpp(W_R, target_n, N, initial_J, n_threads, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
 // arma_dist_al
 arma::mat arma_dist_al(const arma::mat& X);
 RcppExport SEXP _spbalDAS_arma_dist_al(SEXP XSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
     rcpp_result_gen = Rcpp::wrap(arma_dist_al(X));
     return rcpp_result_gen;
 END_RCPP
 }
-// hungarian_arma
-List hungarian_arma(const arma::mat cost);
-RcppExport SEXP _spbalDAS_hungarian_arma(SEXP costSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat >::type cost(costSEXP);
-    rcpp_result_gen = Rcpp::wrap(hungarian_arma(cost));
-    return rcpp_result_gen;
-END_RCPP
-}
-// DAS_cpp
-IntegerMatrix DAS_cpp(const NumericMatrix& pop_, int n, bool verbose);
-RcppExport SEXP _spbalDAS_DAS_cpp(SEXP pop_SEXP, SEXP nSEXP, SEXP verboseSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type pop_(pop_SEXP);
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(DAS_cpp(pop_, n, verbose));
-    return rcpp_result_gen;
-END_RCPP
-}
-// arma_setdiff
-arma::uvec arma_setdiff(arma::uvec x, arma::uvec y);
-RcppExport SEXP _spbalDAS_arma_setdiff(SEXP xSEXP, SEXP ySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::uvec >::type x(xSEXP);
-    Rcpp::traits::input_parameter< arma::uvec >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(arma_setdiff(x, y));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_spbalDAS_native_lapjv", (DL_FUNC) &_spbalDAS_native_lapjv, 1},
+    {"_spbalDAS_LinearAssignmentProblem_cpp", (DL_FUNC) &_spbalDAS_LinearAssignmentProblem_cpp, 6},
     {"_spbalDAS_arma_dist_al", (DL_FUNC) &_spbalDAS_arma_dist_al, 1},
-    {"_spbalDAS_hungarian_arma", (DL_FUNC) &_spbalDAS_hungarian_arma, 1},
-    {"_spbalDAS_DAS_cpp", (DL_FUNC) &_spbalDAS_DAS_cpp, 3},
-    {"_spbalDAS_arma_setdiff", (DL_FUNC) &_spbalDAS_arma_setdiff, 2},
     {NULL, NULL, 0}
 };
 
