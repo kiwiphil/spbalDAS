@@ -29,9 +29,9 @@ NULL
 #' @return A list containing two variables, cost and assignment.
 #'
 #' @examples
-#' # Cost matrix for three 3D points.
+#' # Cost matrix for three 3D points. $cost = 1, $assignment = 2, 1, 0
 #' spbalDAS::native_lapjv(Cost_R = rbind(c(1, 2, 0), c(2, 0, 1), c(1, 4, 19)))
-#' # Cost matrix for three 3D points.
+#' # Cost matrix for three 3D points. $cost = 10, $assignment = 1, 0, 2
 #' spbalDAS::native_lapjv(Cost_R = rbind(c(4, 2, 8), c(2, 3, 7), c(3, 1, 6)))
 #' # Assign 4 machines to 4 jobs to minimize total setup time. $cost = 15, $assignment = 1, 3, 2, 0
 #' spbalDAS::native_lapjv(Cost_R = rbind(c(14, 5, 8, 7), c(2, 12, 6, 5), c(7, 8, 3, 9), c(2, 4, 6, 10)))

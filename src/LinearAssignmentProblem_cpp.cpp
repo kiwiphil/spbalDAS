@@ -456,7 +456,7 @@ Rcpp::IntegerMatrix LinearAssignmentProblem_cpp(Rcpp::NumericMatrix W_R,
   auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
   Rcpp::Rcout << "DAS completed in " << total_ms << " ms\n";
 
-  // Return final matrix
+  // Return final matrix...
   arma::uword final_J = J.back();
   Rcpp::IntegerMatrix result(final_J, target_n);
   for (arma::uword r = 0; r < final_J; ++r)

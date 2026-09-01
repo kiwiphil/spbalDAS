@@ -3,7 +3,7 @@
 #'
 #' @title Dynamic Assignment Sampling (DAS).
 #'
-#' @description DAS draws spatially balanced samples from areal resources. Needs updating!
+#' @description DAS draws spatially balanced samples from areal resources. Needs updating!!!
 #'
 #' @author This function was first written by Blair Robertson in Matlab and later re-written
 #' in R/C++ by Phil Davies.
