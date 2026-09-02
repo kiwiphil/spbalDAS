@@ -23,17 +23,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // LinearAssignmentProblem_cpp
-Rcpp::IntegerMatrix LinearAssignmentProblem_cpp(Rcpp::NumericMatrix W_R, arma::uword target_n, arma::uword N, arma::uword initial_J, int n_threads, bool verbose);
-RcppExport SEXP _spbalDAS_LinearAssignmentProblem_cpp(SEXP W_RSEXP, SEXP target_nSEXP, SEXP NSEXP, SEXP initial_JSEXP, SEXP n_threadsSEXP, SEXP verboseSEXP) {
+Rcpp::IntegerMatrix LinearAssignmentProblem_cpp(const arma::mat& pop, arma::uword target_n, arma::uword initial_J, int n_threads, bool verbose, bool cache_W);
+RcppExport SEXP _spbalDAS_LinearAssignmentProblem_cpp(SEXP popSEXP, SEXP target_nSEXP, SEXP initial_JSEXP, SEXP n_threadsSEXP, SEXP verboseSEXP, SEXP cache_WSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type W_R(W_RSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type pop(popSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type target_n(target_nSEXP);
-    Rcpp::traits::input_parameter< arma::uword >::type N(NSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type initial_J(initial_JSEXP);
     Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(LinearAssignmentProblem_cpp(W_R, target_n, N, initial_J, n_threads, verbose));
+    Rcpp::traits::input_parameter< bool >::type cache_W(cache_WSEXP);
+    rcpp_result_gen = Rcpp::wrap(LinearAssignmentProblem_cpp(pop, target_n, initial_J, n_threads, verbose, cache_W));
     return rcpp_result_gen;
 END_RCPP
 }

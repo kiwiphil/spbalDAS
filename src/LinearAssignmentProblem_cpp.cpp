@@ -2,14 +2,15 @@
 #include <RcppArmadillo.h>
 #include <RcppThread.h>
 #include <chrono>
-#include <vector>
+#include <cmath>
+#include <limits>
+#include <thread>
 #include <unordered_set>
+#include <vector>
 
-// ScopedTimer (unchanged)
 struct ScopedTimer {
   std::string label;
   std::chrono::high_resolution_clock::time_point start;
-  //auto start_time = std::chrono::high_resolution_clock::now();
   ScopedTimer(std::string l) : label(std::move(l)),
   start(std::chrono::high_resolution_clock::now()) {}
   ~ScopedTimer() {
@@ -19,66 +20,55 @@ struct ScopedTimer {
   }
 };
 
-// [[Rcpp::depends(RcppArmadillo)]]
-#include <RcppArmadillo.h>
-#include <vector>
-#include <limits>
-
-// ------------------------------------------------------------------
-// Types
-// ------------------------------------------------------------------
 using cost = double;
 using row  = int;
 using col  = int;
 
 const cost BIG = 1e30;
 
-// ------------------------------------------------------------------
-// Jonker-Volgenant LAPJV (square only)
-// ------------------------------------------------------------------
-//' @name native_lapjv
-//'
-//' @title Solve the Linear Assignment Problem.
-//'
-//' @description Solves the linear assignment problem using the Jonker-Volgenant algorithm.
-//'
-//' @author Phil Davies.
-//'
-//' @param Cost_R The cost matrix.
-//'
-//' @return A list containing two variables, cost and assignment.
-//'
-//' @examples
-//' # Cost matrix for three 3D points. $cost = 1, $assignment = 2, 1, 0
-//' spbalDAS::native_lapjv(Cost_R = rbind(c(1, 2, 0), c(2, 0, 1), c(1, 4, 19)))
-//' # Cost matrix for three 3D points. $cost = 10, $assignment = 1, 0, 2
-//' spbalDAS::native_lapjv(Cost_R = rbind(c(4, 2, 8), c(2, 3, 7), c(3, 1, 6)))
-//' # Assign 4 machines to 4 jobs to minimize total setup time. $cost = 15, $assignment = 1, 3, 2, 0
-//' spbalDAS::native_lapjv(Cost_R = rbind(c(14, 5, 8, 7), c(2, 12, 6, 5), c(7, 8, 3, 9), c(2, 4, 6, 10)))
-//' # $cost = 55, $assignment = 2, 3, 4, 0, 1
-//' spbalDAS::native_lapjv(Cost_R = rbind(c(10, 4, 6, 10, 12), c(11, 7, 7, 9, 14), c(13, 8, 12, 14, 15), c(14, 16, 13, 17, 17), c(17, 11, 17, 20, 19)))
-//'
-//' @export
-// [[Rcpp::export(rng = false)]]
-Rcpp::List native_lapjv(Rcpp::NumericMatrix Cost_R) {
+// Declared in arma_dist_al.cpp
+arma::mat arma_dist_al(const arma::mat& X);
 
-  arma::mat assigncost = Rcpp::as<arma::mat>(Cost_R);
-  int dim = assigncost.n_rows;
+static inline int resolve_n_threads(int n_threads) {
+  if (n_threads == 0) {
+    unsigned hw = std::thread::hardware_concurrency();
+    return static_cast<int>(hw == 0 ? 1 : hw);
+  }
+  return n_threads;
+}
 
-  if (dim == 0 || dim != assigncost.n_cols) {
-    Rcpp::stop("spbal(native_lapjv) requires a square cost matrix (rows == cols).\n"
-                 "Your matrix is %d x %d.\n"
-                 "In your DAS code C is always square, so this is fine.",
-                 dim, assigncost.n_cols);
+static inline double inv_dist(const arma::mat& pop, arma::uword u, arma::uword v) {
+  double s = 0.0;
+  const arma::uword q = pop.n_cols;
+  for (arma::uword d = 0; d < q; ++d) {
+    const double t = pop(u, d) - pop(v, d);
+    s += t * t;
+  }
+  return (s <= 0.0) ? 0.0 : 1.0 / std::sqrt(s);
+}
+
+static arma::mat build_inverse_distance_weights(const arma::mat& pop) {
+  arma::mat W = arma_dist_al(pop);
+  W.transform([](double d) { return (d <= 0.0) ? 0.0 : 1.0 / d; });
+  W.elem(arma::find_nonfinite(W)).zeros();
+  W.diag().zeros();
+  return W;
+}
+
+// Jonker-Volgenant on an Armadillo buffer. Assignment[i] = column assigned to row i (0-based).
+static double lapjv_solve(const arma::mat& assigncost, std::vector<int>& Assignment) {
+  const int dim = static_cast<int>(assigncost.n_rows);
+  if (dim == 0 || dim != static_cast<int>(assigncost.n_cols)) {
+    Rcpp::stop("spbalDAS(lapjv_solve) requires a square cost matrix (rows == cols). "
+               "Your matrix is %d x %d.",
+               dim, static_cast<int>(assigncost.n_cols));
   }
 
-  // Output arrays
   std::vector<col> rowsol(dim, -1);
   std::vector<row> colsol(dim, -1);
   std::vector<cost> u(dim, 0.0);
   std::vector<cost> v(dim, 0.0);
 
-  // Working arrays
   std::vector<row> freeunassigned(dim);
   std::vector<col> collist(dim);
   std::vector<col> matches(dim, 0);
@@ -87,7 +77,6 @@ Rcpp::List native_lapjv(Rcpp::NumericMatrix Cost_R) {
 
   int numfree = 0;
 
-  // ====================== COLUMN REDUCTION ======================
   for (col j = dim; j--;) {
     cost minv = assigncost(0, j);
     row imin = 0;
@@ -111,7 +100,6 @@ Rcpp::List native_lapjv(Rcpp::NumericMatrix Cost_R) {
     }
   }
 
-  // ====================== REDUCTION TRANSFER ======================
   for (row i = 0; i < dim; ++i) {
     if (matches[i] == 0) {
       freeunassigned[numfree++] = i;
@@ -128,7 +116,6 @@ Rcpp::List native_lapjv(Rcpp::NumericMatrix Cost_R) {
     }
   }
 
-  // ====================== AUGMENTING ROW REDUCTION (twice) ======================
   for (int loop = 0; loop < 2; ++loop) {
     int k = 0;
     int prvnumfree = numfree;
@@ -171,7 +158,6 @@ Rcpp::List native_lapjv(Rcpp::NumericMatrix Cost_R) {
     }
   }
 
-  // ====================== AUGMENT SOLUTION ======================
   for (int f = 0; f < numfree; ++f) {
     row freerow = freeunassigned[f];
 
@@ -251,7 +237,6 @@ Rcpp::List native_lapjv(Rcpp::NumericMatrix Cost_R) {
     } while (i != freerow);
   }
 
-  // ====================== TOTAL COST ======================
   cost lapcost = 0.0;
   for (row i = 0; i < dim; ++i) {
     col j = rowsol[i];
@@ -259,131 +244,167 @@ Rcpp::List native_lapjv(Rcpp::NumericMatrix Cost_R) {
     lapcost += assigncost(i, j);
   }
 
-  // ====================== RETURN ======================
-  Rcpp::IntegerVector assignment(dim);
-  for (int i = 0; i < dim; ++i)
-    assignment[i] = rowsol[i];
+  Assignment = std::vector<int>(rowsol.begin(), rowsol.end());
+  return lapcost;
+}
 
+//' @name native_lapjv
+//'
+//' @title Solve the Linear Assignment Problem.
+//'
+//' @description Solves the linear assignment problem using the Jonker-Volgenant algorithm.
+//'
+//' @author Phil Davies.
+//'
+//' @param Cost_R The cost matrix.
+//'
+//' @return A list containing two variables, cost and assignment.
+//'
+//' @examples
+//' # Cost matrix for three 3D points. $cost = 1, $assignment = 2, 1, 0
+//' spbalDAS::native_lapjv(Cost_R = rbind(c(1, 2, 0), c(2, 0, 1), c(1, 4, 19)))
+//' # Cost matrix for three 3D points. $cost = 10, $assignment = 1, 0, 2
+//' spbalDAS::native_lapjv(Cost_R = rbind(c(4, 2, 8), c(2, 3, 7), c(3, 1, 6)))
+//' # Assign 4 machines to 4 jobs to minimize total setup time. $cost = 15, $assignment = 1, 3, 2, 0
+//' spbalDAS::native_lapjv(Cost_R = rbind(c(14, 5, 8, 7), c(2, 12, 6, 5), c(7, 8, 3, 9), c(2, 4, 6, 10)))
+//' # $cost = 55, $assignment = 2, 3, 4, 0, 1
+//' spbalDAS::native_lapjv(Cost_R = rbind(c(10, 4, 6, 10, 12), c(11, 7, 7, 9, 14), c(13, 8, 12, 14, 15), c(14, 16, 13, 17, 17), c(17, 11, 17, 20, 19)))
+//'
+//' @export
+// [[Rcpp::export(rng = false)]]
+Rcpp::List native_lapjv(Rcpp::NumericMatrix Cost_R) {
+  arma::mat assigncost = Rcpp::as<arma::mat>(Cost_R);
+  std::vector<int> assignment;
+  const double lapcost = lapjv_solve(assigncost, assignment);
   return Rcpp::List::create(
     Rcpp::Named("cost")       = lapcost,
     Rcpp::Named("assignment") = assignment
   );
 }
 
-
-// ====================== STABLE LAPJV (TreeDist) ======================
-//inline double xhungarian_solve(const arma::mat& cost, std::vector<int>& Assignment) {
-//  ScopedTimer t("  LAPJV");
-
-//  static Rcpp::Function LAPJV("LAPJV");   // cached
-
-//  Rcpp::List res = LAPJV(Rcpp::wrap(cost));
-//  double total_cost = Rcpp::as<double>(res["score"]);
-
-//  Rcpp::IntegerVector matching = res["matching"];
-//  Assignment.resize(matching.size());
-//  for (size_t i = 0; i < Assignment.size(); ++i)
-//    Assignment[i] = matching[i] - 1;
-
-//  return total_cost;
-//}
-
-
-//' @name hungarian_solve
-//'
-//' @title Wrapper that calls native_lapjv.
-//'
-//' @description ...
-//'
-//' @author Phil Davies.
-//'
-//' @param cost The cost matrix.
-//' @param Assignment The assignment vector.
-//'
-//' @return The total cost.
-//'
-// ====================== WRAPPER THAT CALLS native_lapjv ======================
-inline double hungarian_solve(const arma::mat& cost, std::vector<int>& Assignment) {
-
-  //ScopedTimer t(" Native LAPJV ");
-
-  // call the native_lapjv function
-  Rcpp::List res = native_lapjv(Rcpp::wrap(cost));
-
-  // Extract total cost
-  double total_cost = Rcpp::as<double>(res["cost"]);
-
-  // Extract assignment (already 0-based from native_lapjv)
-  Rcpp::IntegerVector matching = res["assignment"];
-  Assignment.resize(matching.size());
-  for (size_t i = 0; i < Assignment.size(); ++i) {
-    Assignment[i] = matching[i];
-  }
-
-  return total_cost;
+static double hungarian_solve(const arma::mat& cost, std::vector<int>& Assignment) {
+  return lapjv_solve(cost, Assignment);
 }
 
+static void fill_cost_from_W(arma::mat& C,
+                             const arma::mat& W,
+                             const std::vector<std::vector<int>>& SampleMatrix,
+                             const arma::uvec& A0,
+                             arma::uword curr_J,
+                             arma::uword prev_cols,
+                             int n_threads) {
+  auto fill_row = [&](arma::uword r) {
+    arma::uvec C0(prev_cols);
+    for (arma::uword c = 0; c < prev_cols; ++c)
+      C0(c) = static_cast<arma::uword>(SampleMatrix[r][c] - 1);
+    // Row-constant WCij is omitted: it cannot change the JV assignment.
+    C.row(r) = 2.0 * arma::sum(W(A0, C0), 1).t();
+  };
+  if (curr_J >= 256 && n_threads > 1) {
+    RcppThread::parallelFor(0, curr_J, fill_row, n_threads);
+  } else {
+    for (arma::uword r = 0; r < curr_J; ++r) fill_row(r);
+  }
+}
+
+static void fill_cost_onthefly(arma::mat& C,
+                               const arma::mat& pop,
+                               const std::vector<std::vector<int>>& SampleMatrix,
+                               const arma::ivec& A_all,
+                               arma::uword curr_J,
+                               arma::uword prev_cols,
+                               int n_threads) {
+  auto fill_row = [&](arma::uword r) {
+    for (arma::uword k = 0; k < curr_J; ++k) {
+      const arma::uword a = static_cast<arma::uword>(A_all(k) - 1);
+      double acc = 0.0;
+      for (arma::uword c = 0; c < prev_cols; ++c) {
+        const arma::uword u = static_cast<arma::uword>(SampleMatrix[r][c] - 1);
+        acc += inv_dist(pop, u, a);
+      }
+      C(r, k) = 2.0 * acc;
+    }
+  };
+  if (curr_J >= 256 && n_threads > 1) {
+    RcppThread::parallelFor(0, curr_J, fill_row, n_threads);
+  } else {
+    for (arma::uword r = 0; r < curr_J; ++r) fill_row(r);
+  }
+}
 
 //' @name LinearAssignmentProblem_cpp
 //'
-//' @title Solve the Linear Assignment Problem.
+//' @title Grow a DAS master sample by successive linear assignments.
 //'
-//' @description Solves the linear assignment problem using the hungarian algorithm.
+//' @description Implements Algorithm 1 of Robertson, Price and Reale (2024).
+//' Costs are inverse Euclidean distances. The unused row-constant
+//' \eqn{s_j^\top W s_j} term is omitted. Jonker-Volgenant is called on the
+//' Armadillo cost buffer (no wrap through R).
 //'
 //' @author Phil Davies.
 //'
-//' @param W_R A weight matrix.
+//' @param pop Population coordinates, N rows by q columns.
 //' @param target_n The number of sample points required.
-//' @param N The number of points in the population.
-//' @param initial_J ...
-//' @param n_threads The maximum number of threads to use. Default value is 1.
-//' @param verbose When set true will display debug and informational messages.
+//' @param initial_J Number of candidate samples at the first iteration.
+//' @param n_threads Maximum threads for the cost-matrix fill. 0 uses every
+//'   logical CPU. Parallel fill is used only when the current J is at least 256
+//'   and n_threads is greater than 1.
+//' @param verbose When TRUE, print step timings.
+//' @param cache_W When TRUE, build one N by N inverse-distance matrix in C++.
+//'   When FALSE, evaluate inverse distances on the fly (less RAM for large N).
 //'
-//' @return The sample matrix.
-//'
-//' @examples
-//' # Distance matrix for the two 3D points.
-//' spbalDAS::arma_dist_al(X = rbind(c(1, 2, 3), c(4, 3, 2)))
-//' # Distance matrix for three 2D points.
-//' spbalDAS::arma_dist_al(X = matrix(c(2, 3, 0, 9, 4, 5), nrow = 3, byrow = TRUE))
+//' @return Integer matrix of candidate samples (1-based population indices).
 //'
 //' @export
 // [[Rcpp::export(rng = false)]]
-Rcpp::IntegerMatrix LinearAssignmentProblem_cpp(Rcpp::NumericMatrix W_R,
+Rcpp::IntegerMatrix LinearAssignmentProblem_cpp(const arma::mat& pop,
                                                 arma::uword target_n,
-                                                arma::uword N,
                                                 arma::uword initial_J,
                                                 int n_threads = 1,
-                                                bool verbose = false) {
+                                                bool verbose = false,
+                                                bool cache_W = true) {
 
-  auto start_time = std::chrono::high_resolution_clock::now();   // ← for summary
+  const arma::uword N = pop.n_rows;
+  n_threads = resolve_n_threads(n_threads);
 
-  if(verbose){
-    ScopedTimer total_timer("LinearAssignmentProblem_cpp TOTAL");
+  if (target_n < 1 || target_n >= N) {
+    Rcpp::stop("spbalDAS(LinearAssignmentProblem_cpp) target_n must satisfy 1 <= n < N.");
+  }
+  if (initial_J < 2 || initial_J > N / 2) {
+    Rcpp::stop("spbalDAS(LinearAssignmentProblem_cpp) initial_J must satisfy 2 <= J1 <= floor(N/2).");
   }
 
-  const arma::mat W = Rcpp::as<arma::mat>(W_R);
+  auto start_time = std::chrono::high_resolution_clock::now();
+
+  arma::mat W;
+  if (cache_W) {
+    if (verbose) {
+      ScopedTimer t("Build inverse-distance weights");
+      W = build_inverse_distance_weights(pop);
+    } else {
+      W = build_inverse_distance_weights(pop);
+    }
+  }
 
   std::vector<arma::uword> J(target_n);
   J[0] = initial_J;
   for (arma::uword k = 1; k < target_n; ++k)
-    J[k] = std::max<arma::uword>(1u, std::min(J[k-1], N / (k + 1)));
+    J[k] = std::max<arma::uword>(1u, std::min(J[k - 1], N / (k + 1)));
 
-  // Initial sample
   std::vector<std::vector<int>> SampleMatrix(initial_J, std::vector<int>(1));
   arma::uvec init_perm = arma::randperm(N, initial_J);
   for (arma::uword r = 0; r < initial_J; ++r)
     SampleMatrix[r][0] = static_cast<int>(init_perm[r] + 1);
 
   for (arma::uword i = 1; i < target_n; ++i) {
-    if(verbose){
-      ScopedTimer step_timer("Step i=" + std::to_string(i+1) + " (J=" + std::to_string(J[i]) + ")");
+    if (verbose) {
+      ScopedTimer step_timer("Step i=" + std::to_string(i + 1) +
+                             " (J=" + std::to_string(J[i]) + ")");
     }
 
     arma::uword curr_J = J[i];
     arma::uword prev_cols = i;
 
-    // row selection + newSample + setdiff + Ai
     arma::uvec row_sel = arma::randperm(SampleMatrix.size()).subvec(0, curr_J - 1);
     std::vector<std::vector<int>> newSample(curr_J, std::vector<int>(i + 1));
 
@@ -392,71 +413,55 @@ Rcpp::IntegerMatrix LinearAssignmentProblem_cpp(Rcpp::NumericMatrix W_R,
         newSample[r][c] = SampleMatrix[row_sel[r]][c];
 
     std::unordered_set<int> used;
-    for (const auto& row : newSample)
+    for (const auto& grow : newSample)
       for (arma::uword c = 0; c < prev_cols; ++c)
-        used.insert(row[c]);
+        used.insert(grow[c]);
 
     std::vector<int> OmegaNotCi;
     OmegaNotCi.reserve(N - used.size());
     for (int k = 1; k <= static_cast<int>(N); ++k)
       if (used.find(k) == used.end()) OmegaNotCi.push_back(k);
 
-      arma::uvec r2 = arma::randperm(OmegaNotCi.size());
-      for (arma::uword r = 0; r < curr_J; ++r)
-        newSample[r][i] = OmegaNotCi[r2[r]];
+    arma::uvec r2 = arma::randperm(OmegaNotCi.size());
+    for (arma::uword r = 0; r < curr_J; ++r)
+      newSample[r][i] = OmegaNotCi[r2[r]];
 
-      SampleMatrix = std::move(newSample);
+    SampleMatrix = std::move(newSample);
 
-      // Cost matrix
-      arma::mat C(curr_J, curr_J);
-      {
-        if(verbose){
-          ScopedTimer t("  Build cost matrix C");
-        }
+    arma::ivec A_all(curr_J);
+    for (arma::uword r = 0; r < curr_J; ++r)
+      A_all(r) = SampleMatrix[r][i];
 
-        arma::ivec A_all(curr_J);
-        for (arma::uword r = 0; r < curr_J; ++r) A_all(r) = SampleMatrix[r][i];
+    arma::mat C(curr_J, curr_J);
+    auto build_C = [&]() {
+      if (cache_W) {
         arma::uvec A0 = arma::conv_to<arma::uvec>::from(A_all - 1);
-
-        if (curr_J >= 256 && n_threads > 1) {
-          RcppThread::parallelFor(0, curr_J, [&](arma::uword r) {
-            arma::uvec C0(prev_cols);
-            for (arma::uword c = 0; c < prev_cols; ++c)
-              C0(c) = SampleMatrix[r][c] - 1;
-
-            double WCij = (prev_cols == 0) ? 0.0 : arma::accu(W.submat(C0, C0));
-            arma::rowvec contrib = 2.0 * arma::sum(W(A0, C0), 1).t();
-            C.row(r) = WCij + contrib;
-          }, n_threads);
-        } else {
-          for (arma::uword r = 0; r < curr_J; ++r) {
-            arma::uvec C0(prev_cols);
-            for (arma::uword c = 0; c < prev_cols; ++c)
-              C0(c) = SampleMatrix[r][c] - 1;
-
-            double WCij = (prev_cols == 0) ? 0.0 : arma::accu(W.submat(C0, C0));
-            arma::rowvec contrib = 2.0 * arma::sum(W(A0, C0), 1).t();
-            C.row(r) = WCij + contrib;
-          }
-        }
+        fill_cost_from_W(C, W, SampleMatrix, A0, curr_J, prev_cols, n_threads);
+      } else {
+        fill_cost_onthefly(C, pop, SampleMatrix, A_all, curr_J, prev_cols, n_threads);
       }
+    };
+    if (verbose) {
+      ScopedTimer t("  Build cost matrix C");
+      build_C();
+    } else {
+      build_C();
+    }
 
-      // LAPJV
-      {
-        std::vector<int> Assignment;
-        hungarian_solve(C, Assignment);
-
-        for (arma::uword r = 0; r < curr_J; ++r)
-          SampleMatrix[r][i] = OmegaNotCi[Assignment[r]];
-      }
+    std::vector<int> Assignment;
+    hungarian_solve(C, Assignment);
+    // Columns of C correspond to A_all (the shuffled draw), not OmegaNotCi in order.
+    for (arma::uword r = 0; r < curr_J; ++r)
+      SampleMatrix[r][i] = A_all(Assignment[r]);
   }
 
-  // ====================== SUMMARY LINE ======================
-  auto end_time = std::chrono::high_resolution_clock::now();
-  auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-  Rcpp::Rcout << "DAS completed in " << total_ms << " ms\n";
+  if (verbose) {
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      end_time - start_time).count();
+    Rcpp::Rcout << "DAS completed in " << total_ms << " ms\n";
+  }
 
-  // Return final matrix...
   arma::uword final_J = J.back();
   Rcpp::IntegerMatrix result(final_J, target_n);
   for (arma::uword r = 0; r < final_J; ++r)
