@@ -9,6 +9,7 @@ testthat::test_that("2. Verify native_lapjv #2.", {
   res <- native_lapjv(cost)
   # Throw an error if solver computes incorrect cost
   testthat::expect_equal(res$cost, 6)
-  # Throw an error if solver computes incorrect pairs
-  testthat::expect_equal(res$assignment, c(1, 2, 0))
+  # Several assignments achieve cost 6; accept any bijection of that cost.
+  testthat::expect_equal(sort(res$assignment), 0:2)
+  testthat::expect_equal(sum(cost[cbind(1:3, res$assignment + 1L)]), 6)
 })

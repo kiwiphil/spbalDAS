@@ -5,7 +5,9 @@
 #'
 #' @title Solve the Linear Assignment Problem.
 #'
-#' @description Solves the linear assignment problem using the Jonker-Volgenant algorithm.
+#' @description Solves the linear assignment problem using the Kuhn–Munkres
+#'   (Hungarian) algorithm. The previous Jonker–Volgenant port could cycle on
+#'   floating-point DAS costs.
 #'
 #' @author Phil Davies.
 #'
@@ -18,10 +20,6 @@
 #' spbalDAS::native_lapjv(Cost_R = rbind(c(1, 2, 0), c(2, 0, 1), c(1, 4, 19)))
 #' # Cost matrix for three 3D points. $cost = 10, $assignment = 1, 0, 2
 #' spbalDAS::native_lapjv(Cost_R = rbind(c(4, 2, 8), c(2, 3, 7), c(3, 1, 6)))
-#' # Assign 4 machines to 4 jobs to minimize total setup time. $cost = 15, $assignment = 1, 3, 2, 0
-#' spbalDAS::native_lapjv(Cost_R = rbind(c(14, 5, 8, 7), c(2, 12, 6, 5), c(7, 8, 3, 9), c(2, 4, 6, 10)))
-#' # $cost = 55, $assignment = 2, 3, 4, 0, 1
-#' spbalDAS::native_lapjv(Cost_R = rbind(c(10, 4, 6, 10, 12), c(11, 7, 7, 9, 14), c(13, 8, 12, 14, 15), c(14, 16, 13, 17, 17), c(17, 11, 17, 20, 19)))
 #'
 #' @export
 native_lapjv <- function(Cost_R) {
@@ -43,8 +41,8 @@ native_lapjv <- function(Cost_R) {
 #' @param target_n The number of sample points required.
 #' @param initial_J Number of candidate samples at the first iteration.
 #' @param n_threads Maximum threads for the cost-matrix fill. 0 uses every
-#'   logical CPU. Parallel fill is used only when the current J is at least 256
-#'   and n_threads is greater than 1.
+#'   logical CPU. Parallel fill runs when J^2 * (current sample size) is at
+#'   least 2048 and n_threads is greater than 1.
 #' @param verbose When TRUE, print step timings.
 #' @param cache_W When TRUE, build one N by N inverse-distance matrix in C++.
 #'   When FALSE, evaluate inverse distances on the fly (less RAM for large N).
@@ -54,6 +52,35 @@ native_lapjv <- function(Cost_R) {
 #' @export
 LinearAssignmentProblem_cpp <- function(pop, target_n, initial_J, n_threads = 1L, verbose = FALSE, cache_W = TRUE) {
     .Call(`_spbalDAS_LinearAssignmentProblem_cpp`, pop, target_n, initial_J, n_threads, verbose, cache_W)
+}
+
+#' @name DoubleAssignmentProblem_cpp
+#'
+#' @title Grow a doubly balanced DAS master sample.
+#'
+#' @description Port of MATLAB \code{doubleDAS}: successive assignment with
+#' cost \eqn{\alpha SB + (1-\alpha) B}, where \eqn{SB} is the inverse-distance
+#' spread used by DAS and \eqn{B} is the squared auxiliary-sum balance term.
+#' Uses the same candidate growth, cached/on-the-fly weights, and
+#' Jonker-Volgenant solver as \code{LinearAssignmentProblem_cpp}.
+#'
+#' @author Blair Robertson (Matlab), Phil Davies (R/C++).
+#'
+#' @param pop Population coordinates, N rows by q columns.
+#' @param aux Auxiliary matrix, N rows.
+#' @param alpha Mix of spread and balance, in \eqn{[0,1]}. \code{1} is
+#'   spatially balanced, \code{0} is approximately balanced.
+#' @param target_n Sample size.
+#' @param initial_J Number of candidate samples at the first iteration.
+#' @param n_threads Maximum threads for the cost-matrix fill.
+#' @param verbose When TRUE, print step timings.
+#' @param cache_W When TRUE, build one N by N inverse-distance matrix.
+#'
+#' @return Integer matrix of candidate samples (1-based population indices).
+#'
+#' @export
+DoubleAssignmentProblem_cpp <- function(pop, aux, alpha, target_n, initial_J, n_threads = 1L, verbose = FALSE, cache_W = TRUE) {
+    .Call(`_spbalDAS_DoubleAssignmentProblem_cpp`, pop, aux, alpha, target_n, initial_J, n_threads, verbose, cache_W)
 }
 
 #' @name arma_dist_al

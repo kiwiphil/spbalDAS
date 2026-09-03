@@ -17,12 +17,13 @@
 #'   Default is \code{min(200, floor(N/2))}. Values above 500 are allowed but
 #'   trigger a warning (large assignment problems dominate run time).
 #' @param n_threads Threads used when filling the cost matrix. \code{0} uses
-#'   every logical CPU. Parallel fill runs only when the current \code{J} is
-#'   at least 256 and \code{n_threads} is greater than 1. Default is 1.
+#'   every logical CPU. Parallel fill runs when \eqn{J^2 i} is at least 2048
+#'   (so \code{J1 = 250} does use extra cores). Default is 1.
 #' @param verbose Print step timings. Default is FALSE.
 #' @param cache_W If \code{TRUE}, build one \eqn{N \times N} inverse-distance
 #'   matrix in C++. If \code{FALSE}, compute inverse distances on the fly.
-#'   Default is \code{TRUE} when \code{N <= 8000}, otherwise \code{FALSE}.
+#'   Default is \code{TRUE} when \code{N <= 2500}, otherwise \code{FALSE}.
+#'   At large \code{N} the cached matrix is RAM-bound and usually slower.
 #'
 #' @return An integer matrix with one candidate sample per row (1-based
 #'   population indices).
@@ -75,9 +76,15 @@ DAS <- function(pop,
   }
 
   if (is.null(cache_W)) {
-    cache_W <- (N <= 8000L)
+    cache_W <- (N <= 2500L)
   }
   cache_W <- isTRUE(cache_W)
+  if (cache_W && N > 4000L) {
+    warning(sprintf(
+      "spbalDAS(DAS) cache_W=TRUE at N=%d stores an N x N matrix (~%.0f MiB) and is usually slower than cache_W=FALSE.",
+      N, 8 * N * N / (1024 * 1024)
+    ), call. = FALSE)
+  }
 
   if (verbose) {
     message(sprintf("[%s] Starting DAS N=%d n=%d J1=%d cache_W=%s n_threads=%s",

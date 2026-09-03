@@ -2,6 +2,10 @@ exportPattern("^[[:alpha:]]+")
 
 export(arma_dist_al)
 export(native_lapjv)
+export(DAS)
+export(doubleDAS)
+export(LinearAssignmentProblem_cpp)
+export(DoubleAssignmentProblem_cpp)
 import(Rcpp)
 import(RcppArmadillo)
 

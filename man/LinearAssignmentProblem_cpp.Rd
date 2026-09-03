@@ -2,42 +2,41 @@
 % Please edit documentation in R/RcppExports.R
 \name{LinearAssignmentProblem_cpp}
 \alias{LinearAssignmentProblem_cpp}
-\title{Solve the Linear Assignment Problem.}
+\title{Grow a DAS master sample by successive linear assignments.}
 \usage{
 LinearAssignmentProblem_cpp(
-  W_R,
+  pop,
   target_n,
-  N,
   initial_J,
   n_threads = 1L,
-  verbose = FALSE
+  verbose = FALSE,
+  cache_W = TRUE
 )
 }
 \arguments{
-\item{W_R}{A weight matrix.}
+\item{pop}{Population coordinates, N rows by q columns.}
 
 \item{target_n}{The number of sample points required.}
 
-\item{N}{The number of points in the population.}
+\item{initial_J}{Number of candidate samples at the first iteration.}
 
-\item{initial_J}{...}
+\item{n_threads}{Maximum threads for the cost-matrix fill. 0 uses every
+logical CPU. Parallel fill runs when J^2 * (current sample size) is at
+least 2048 and n_threads is greater than 1.}
 
-\item{n_threads}{The maximum number of threads to use. Default value is 1.}
+\item{verbose}{When TRUE, print step timings.}
 
-\item{verbose}{When set true will display debug and informational messages.}
+\item{cache_W}{When TRUE, build one N by N inverse-distance matrix in C++.
+When FALSE, evaluate inverse distances on the fly (less RAM for large N).}
 }
 \value{
-The sample matrix.
+Integer matrix of candidate samples (1-based population indices).
 }
 \description{
-Solves the linear assignment problem using the hungarian algorithm.
-}
-\examples{
-# Distance matrix for the two 3D points.
-spbalDAS::arma_dist_al(X = rbind(c(1, 2, 3), c(4, 3, 2)))
-# Distance matrix for three 2D points.
-spbalDAS::arma_dist_al(X = matrix(c(2, 3, 0, 9, 4, 5), nrow = 3, byrow = TRUE))
-
+Implements Algorithm 1 of Robertson, Price and Reale (2024).
+Costs are inverse Euclidean distances. The unused row-constant
+\eqn{s_j^\top W s_j} term is omitted. Jonker-Volgenant is called on the
+Armadillo cost buffer (no wrap through R).
 }
 \author{
 Phil Davies.

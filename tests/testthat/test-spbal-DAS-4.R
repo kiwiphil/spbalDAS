@@ -29,3 +29,21 @@ testthat::test_that("DAS rejects n >= N", {
   pop <- matrix(runif(20), ncol = 2)
   testthat::expect_error(DAS(pop = pop, n = 10L), "1 <= n < nrow")
 })
+
+testthat::test_that("n_threads = 0 still returns unique units", {
+  set.seed(9)
+  pop <- matrix(runif(80), ncol = 2)
+  samp <- DAS(pop = pop, n = 8L, J1 = 10L, n_threads = 0L, cache_W = FALSE)
+  testthat::expect_equal(ncol(samp), 8L)
+  for (r in seq_len(nrow(samp))) {
+    testthat::expect_equal(length(unique(samp[r, ])), 8L)
+  }
+})
+
+testthat::test_that("J1 = 250 does not stall on overlapping candidate costs", {
+  set.seed(1)
+  pop <- matrix(runif(1200), ncol = 2)
+  samp <- DAS(pop, n = 12L, J1 = 250L, cache_W = FALSE, n_threads = 1L)
+  testthat::expect_equal(ncol(samp), 12L)
+  testthat::expect_true(all(samp >= 1L & samp <= nrow(pop)))
+})

@@ -37,6 +37,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// DoubleAssignmentProblem_cpp
+Rcpp::IntegerMatrix DoubleAssignmentProblem_cpp(const arma::mat& pop, const arma::mat& aux, double alpha, arma::uword target_n, arma::uword initial_J, int n_threads, bool verbose, bool cache_W);
+RcppExport SEXP _spbalDAS_DoubleAssignmentProblem_cpp(SEXP popSEXP, SEXP auxSEXP, SEXP alphaSEXP, SEXP target_nSEXP, SEXP initial_JSEXP, SEXP n_threadsSEXP, SEXP verboseSEXP, SEXP cache_WSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type pop(popSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type aux(auxSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type target_n(target_nSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type initial_J(initial_JSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< bool >::type cache_W(cache_WSEXP);
+    rcpp_result_gen = Rcpp::wrap(DoubleAssignmentProblem_cpp(pop, aux, alpha, target_n, initial_J, n_threads, verbose, cache_W));
+    return rcpp_result_gen;
+END_RCPP
+}
 // arma_dist_al
 arma::mat arma_dist_al(const arma::mat& X);
 RcppExport SEXP _spbalDAS_arma_dist_al(SEXP XSEXP) {
@@ -51,6 +68,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_spbalDAS_native_lapjv", (DL_FUNC) &_spbalDAS_native_lapjv, 1},
     {"_spbalDAS_LinearAssignmentProblem_cpp", (DL_FUNC) &_spbalDAS_LinearAssignmentProblem_cpp, 6},
+    {"_spbalDAS_DoubleAssignmentProblem_cpp", (DL_FUNC) &_spbalDAS_DoubleAssignmentProblem_cpp, 8},
     {"_spbalDAS_arma_dist_al", (DL_FUNC) &_spbalDAS_arma_dist_al, 1},
     {NULL, NULL, 0}
 };

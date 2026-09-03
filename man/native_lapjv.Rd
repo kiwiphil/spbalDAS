@@ -13,17 +13,15 @@ native_lapjv(Cost_R)
 A list containing two variables, cost and assignment.
 }
 \description{
-Solves the linear assignment problem using the Jonker-Volgenant algorithm.
+Solves the linear assignment problem using the Kuhn–Munkres
+  (Hungarian) algorithm. The previous Jonker–Volgenant port could cycle on
+  floating-point DAS costs.
 }
 \examples{
-# Cost matrix for three 3D points.
+# Cost matrix for three 3D points. $cost = 1, $assignment = 2, 1, 0
 spbalDAS::native_lapjv(Cost_R = rbind(c(1, 2, 0), c(2, 0, 1), c(1, 4, 19)))
-# Cost matrix for three 3D points.
+# Cost matrix for three 3D points. $cost = 10, $assignment = 1, 0, 2
 spbalDAS::native_lapjv(Cost_R = rbind(c(4, 2, 8), c(2, 3, 7), c(3, 1, 6)))
-# Assign 4 machines to 4 jobs to minimize total setup time. $cost = 15, $assignment = 1, 3, 2, 0
-spbalDAS::native_lapjv(Cost_R = rbind(c(14, 5, 8, 7), c(2, 12, 6, 5), c(7, 8, 3, 9), c(2, 4, 6, 10)))
-# $cost = 55, $assignment = 2, 3, 4, 0, 1
-spbalDAS::native_lapjv(Cost_R = rbind(c(10, 4, 6, 10, 12), c(11, 7, 7, 9, 14), c(13, 8, 12, 14, 15), c(14, 16, 13, 17, 17), c(17, 11, 17, 20, 19)))
 
 }
 \author{

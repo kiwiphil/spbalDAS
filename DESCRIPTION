@@ -1,23 +1,21 @@
 Package: spbalDAS
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Title: Dynamic Assignment Sampling
+Version: 0.1.3
+Authors@R: c(
+    person("Phil", "Davies", email = "philip.davies@canterbury.ac.nz", role = c("aut", "cre")),
+    person("Blair", "Robertson", role = "aut"))
+Description: Dynamic Assignment Sampling (DAS) and doubly balanced DAS
+    for well-spread master samples over auxiliary spaces, following
+    Robertson, Price and Reale (2024) <doi:10.1093/biomtc/ujae026>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
-    units,
-    sf,
     Rcpp (>= 1.0.0),
-    RcppArmadillo,
-    TreeDist
+    RcppArmadillo
 LinkingTo:
     Rcpp,
     RcppArmadillo,
-    RcppHungarian,
     RcppThread
 LazyData: true
 RoxygenNote: 7.3.3

@@ -4,40 +4,43 @@
 \alias{DAS}
 \title{Dynamic Assignment Sampling (DAS).}
 \usage{
-DAS(pop, n, J1, n_threads = 1, verbose = FALSE)
+DAS(pop, n, J1 = NULL, n_threads = 1, verbose = FALSE, cache_W = NULL)
 }
 \arguments{
-\item{pop}{Population point pairs. What data types will be supported?}
+\item{pop}{Numeric matrix of population coordinates, one unit per row.}
 
 \item{n}{The number of sample points to draw from the population.}
 
-\item{J1}{maximum number of candidate samples 2<= J1 <= [N/2].}
+\item{J1}{Maximum number of candidate samples, \code{2 <= J1 <= floor(N/2)}.
+Default is \code{min(200, floor(N/2))}. Values above 500 are allowed but
+trigger a warning (large assignment problems dominate run time).}
 
-\item{n_threads}{The number of threads to use, when calculation the cost matrix, a value of 0
-will result in a thread being dispatched on each available logical CPU. The default is n_threads=1.
-This parameter takes affect only when the current J value is greater than or equal to 256 and
-n_threads is greater than 1.}
+\item{n_threads}{Threads used when filling the cost matrix. \code{0} uses
+every logical CPU. Parallel fill runs when \eqn{J^2 i} is at least 2048
+(so \code{J1 = 250} does use extra cores). Default is 1.}
 
-\item{verbose}{Boolean if you want to see any output printed to screen. Helpful if taking a
-long time. Default is FALSE i.e. no informational messages are displayed.}
+\item{verbose}{Print step timings. Default is FALSE.}
+
+\item{cache_W}{If \code{TRUE}, build one \eqn{N \times N} inverse-distance
+matrix in C++. If \code{FALSE}, compute inverse distances on the fly.
+Default is \code{TRUE} when \code{N <= 2500}, otherwise \code{FALSE}.
+At large \code{N} the cached matrix is RAM-bound and usually slower.}
 }
 \value{
-A list containing one variable, \code{$SampleMatrix} Jn by n matrix containing
-population indices, where each row is a candidate sample. I could also return the cost
-and pairs.
+An integer matrix with one candidate sample per row (1-based
+  population indices).
 }
 \description{
-DAS draws spatially balanced samples from areal resources. Needs updating!
+DAS draws well-spread master samples over an auxiliary space
+(Robertson, Price and Reale 2024). Each row of the returned matrix is a
+candidate sample of size \code{n}; the first \code{k} columns of any row
+are a size-\code{k} DAS sample.
 }
 \examples{
-# DAS sample ----------------------------------------------
-
-my_matrix <- matrix(sample(0:500, 10000, replace = TRUE), nrow = 100, ncol = 100)
-newpop <- matrix(my_matrix, ncol = 2, byrow = TRUE)
-n_samples <- 50
-sampMx <- spbalDAS::DAS(pop = newpop, n = n_samples, verbose = FALSE)
-# display first twenty sample points.
-sampMx[1:20]
+set.seed(511)
+pop <- matrix(runif(200), ncol = 2)
+sampMx <- DAS(pop = pop, n = 15)
+sampMx[1:3, ]
 
 }
 \author{

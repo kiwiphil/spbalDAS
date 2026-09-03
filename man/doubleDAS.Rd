@@ -2,42 +2,68 @@
 % Please edit documentation in R/doubleDAS.R
 \name{doubleDAS}
 \alias{doubleDAS}
-\title{Double Dynamic Assignment Sampling (doubleDAS).}
+\title{Doubly balanced Dynamic Assignment Sampling (doubleDAS).}
 \usage{
-doubleDAS(pop, aux, n, alpha, verbose = FALSE)
+doubleDAS(
+  pop,
+  aux,
+  n,
+  alpha = 0.5,
+  J1 = NULL,
+  n_threads = 1,
+  verbose = FALSE,
+  cache_W = NULL
+)
 }
 \arguments{
-\item{pop}{Population points.}
+\item{pop}{Numeric matrix of population coordinates, one unit per row.}
 
-\item{aux}{Auxilliary variables for each population unit.}
+\item{aux}{Numeric matrix of auxiliary variables, one row per unit.}
 
 \item{n}{Sample size.}
 
-\item{alpha}{The objective function parameter which allows the user to control properties of a DAS sample:
-alpha = 1 to achieve spatially balanced samples. alpha = 0 < alpha < 1 adds double balance to the sample, setting alpha to 0 forces
-the sample to be approximately balanced.}
+\item{alpha}{Mix in \eqn{[0, 1]}. Default 0.5.}
 
-\item{verbose}{Boolean if you want to see any output printed to screen. Helpful if taking a
-long time. Default is FALSE i.e. no informational messages are displayed.}
+\item{J1}{Maximum number of candidate samples,
+\code{2 <= J1 <= floor(N/2)}. Default \code{min(500, floor(N/2))},
+matching the MATLAB.}
+
+\item{n_threads}{Threads for the cost-matrix fill. See \code{\link{DAS}}.}
+
+\item{verbose}{Print step timings. Default FALSE.}
+
+\item{cache_W}{Cache the \eqn{N \times N} inverse-distance matrix when
+\code{alpha > 0}. Default \code{N <= 2500}. At large \code{N} this is
+usually slower than on-the-fly distances.}
 }
 \value{
-A list containing one variable, \code{$SampleMatrix} Jn by n matrix containing
- population indices, where each row is a candidate sample.
+Integer matrix of candidate samples (1-based population indices).
+  Each row is a sample of size \code{n}; the first \code{k} columns of any
+  row are a size-\code{k} doubleDAS sample.
 }
 \description{
-DAS
+Port of the MATLAB \code{doubleDAS} sampler. Candidate samples
+grow by successive linear assignment with cost
+\deqn{C = \alpha\,SB + (1-\alpha)\,B}{C = alpha * SB + (1 - alpha) * B}
+where \eqn{SB} is the inverse-distance spread used by \code{\link{DAS}}
+(MATLAB \code{SBMoranIvec}) and \eqn{B} is the squared sum of auxiliary
+variables after appending a candidate unit (MATLAB \code{LinearAssignment}).
+
+\code{alpha = 1} is spatially balanced (same objective as \code{DAS}).
+\code{alpha = 0} is approximately balanced on \code{aux}. Values in
+between are doubly balanced.
+
+Reuses \code{arma_dist_al} weights, the DAS candidate-growth schedule, and
+\code{native_lapjv} (Jonker-Volgenant) in place of MATLAB \code{matchpairs}.
 }
 \examples{
-# doubleDAS sample ----------------------------------------------
-
-my_matrix <- matrix(sample(0:500, 10000, replace = TRUE), nrow = 100, ncol = 100)
-newpop <- matrix(my_matrix, ncol = 2, byrow = TRUE)
-n_samples <- 50
-sampMx <- spbalDAS::doubleDAS(pop = newpop, n = n_samples, verbose = FALSE)
-# display first twenty sample points.
-sampMx[1:20]
+set.seed(511)
+pop <- matrix(runif(200), ncol = 2)
+aux <- matrix(runif(300), ncol = 3)
+samp <- doubleDAS(pop, aux, n = 12, alpha = 0.5)
+samp[1, ]
 
 }
 \author{
-This function was first written by Blair Robertson in Matlab and later re-written in R by Phil Davies.
+Blair Robertson (Matlab); R/C++ port by Phil Davies.
 }

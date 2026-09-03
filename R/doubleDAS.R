@@ -1,216 +1,157 @@
-# doubleDAS.R
-
-
 #' @name doubleDAS
 #'
-#' @title Double Dynamic Assignment Sampling (doubleDAS).
+#' @title Doubly balanced Dynamic Assignment Sampling (doubleDAS).
 #'
-#' @description DAS
+#' @description Port of the MATLAB \code{doubleDAS} sampler. Candidate samples
+#' grow by successive linear assignment with cost
+#' \deqn{C = \alpha\,SB + (1-\alpha)\,B}{C = alpha * SB + (1 - alpha) * B}
+#' where \eqn{SB} is the inverse-distance spread used by \code{\link{DAS}}
+#' (MATLAB \code{SBMoranIvec}) and \eqn{B} is the squared sum of auxiliary
+#' variables after appending a candidate unit (MATLAB \code{LinearAssignment}).
 #'
-#' @author This function was first written by Blair Robertson in Matlab and later re-written in R by Phil Davies.
+#' \code{alpha = 1} is spatially balanced (same objective as \code{DAS}).
+#' \code{alpha = 0} is approximately balanced on \code{aux}. Values in
+#' between are doubly balanced.
 #'
-#' @param pop Population points.
-#' @param aux Auxilliary variables for each population unit.
+#' Reuses \code{arma_dist_al} weights, the DAS candidate-growth schedule, and
+#' \code{native_lapjv} (Jonker-Volgenant) in place of MATLAB \code{matchpairs}.
+#'
+#' @author Blair Robertson (Matlab); R/C++ port by Phil Davies.
+#'
+#' @param pop Numeric matrix of population coordinates, one unit per row.
+#' @param aux Numeric matrix of auxiliary variables, one row per unit.
 #' @param n Sample size.
-#' @param alpha The objective function parameter which allows the user to control properties of a DAS sample:
-#'  alpha = 1 to achieve spatially balanced samples. alpha = 0 < alpha < 1 adds double balance to the sample, setting alpha to 0 forces
-#'  the sample to be approximately balanced.
-#' @param verbose Boolean if you want to see any output printed to screen. Helpful if taking a
-#' long time. Default is FALSE i.e. no informational messages are displayed.
+#' @param alpha Mix in \eqn{[0, 1]}. Default 0.5.
+#' @param J1 Maximum number of candidate samples,
+#'   \code{2 <= J1 <= floor(N/2)}. Default \code{min(500, floor(N/2))},
+#'   matching the MATLAB.
+#' @param n_threads Threads for the cost-matrix fill. See \code{\link{DAS}}.
+#' @param verbose Print step timings. Default FALSE.
+#' @param cache_W Cache the \eqn{N \times N} inverse-distance matrix when
+#'   \code{alpha > 0}. Default \code{N <= 2500}. At large \code{N} this is
+#'   usually slower than on-the-fly distances.
 #'
-#' @return A list containing one variable, \code{$SampleMatrix} Jn by n matrix containing
-#'  population indices, where each row is a candidate sample.
+#' @return Integer matrix of candidate samples (1-based population indices).
+#'   Each row is a sample of size \code{n}; the first \code{k} columns of any
+#'   row are a size-\code{k} doubleDAS sample.
 #'
-
 #' @examples
-#' # doubleDAS sample ----------------------------------------------
+#' set.seed(511)
+#' pop <- matrix(runif(200), ncol = 2)
+#' aux <- matrix(runif(300), ncol = 3)
+#' samp <- doubleDAS(pop, aux, n = 12, alpha = 0.5)
+#' samp[1, ]
 #'
-#' my_matrix <- matrix(sample(0:500, 10000, replace = TRUE), nrow = 100, ncol = 100)
-#' newpop <- matrix(my_matrix, ncol = 2, byrow = TRUE)
-#' n_samples <- 50
-
-#' sampMx <- spbalDAS::doubleDAS(pop = newpop, n = n_samples, verbose = FALSE)
-#' # display first twenty sample points.
-#' sampMx[1:20]
-#'
-
 #' @export
-doubleDAS <- function(pop, aux, n, alpha, verbose = FALSE) {
-  # parm checks:
-  # spbal::validate_parameters("pop", pop) # check - if pop all numeric.
-  #       - pop 2 or more columns
-  # spbal::validate_parameters("n", n)     #       - n > 0
-  # n < nrow(pop)
-  if(n >= nrow(pop)){
-    base::stop(base::c("spbal(doubleDAS) Number of samples must not exceed number of observations."))
+doubleDAS <- function(pop,
+                      aux,
+                      n,
+                      alpha = 0.5,
+                      J1 = NULL,
+                      n_threads = 1,
+                      verbose = FALSE,
+                      cache_W = NULL) {
+
+  if (is.null(pop) || !is.matrix(pop) || !is.numeric(pop)) {
+    stop("spbalDAS(doubleDAS) pop must be a numeric matrix with one unit per row.")
+  }
+  if (ncol(pop) < 1L) {
+    stop("spbalDAS(doubleDAS) pop must have at least one coordinate column.")
+  }
+  if (is.null(aux) || !is.matrix(aux) || !is.numeric(aux)) {
+    stop("spbalDAS(doubleDAS) aux must be a numeric matrix with one row per unit.")
+  }
+  if (nrow(aux) != nrow(pop)) {
+    stop("spbalDAS(doubleDAS) aux must have the same number of rows as pop.")
+  }
+  if (ncol(aux) < 1L) {
+    stop("spbalDAS(doubleDAS) aux must have at least one column.")
   }
 
-  # alpha needs to be between 0 and 1.
-  # Initialisation
   N <- nrow(pop)
-  J1 <- floor(N / 2)
-  J <- c(J1, J1)
-  I <- sample(N)
-  SampleMatrix <- matrix(I[1:J1], nrow = J1, ncol = 1)
-  print(SampleMatrix[1:20])
-
-  X = aux
-
-  # Compute weight matrix - this takes a fair chunk of time.
-  #W <- 1. / as.matrix(arma_dist_al(pop))
-  W <- 1. / as.matrix(dist_al(pop))
-  W[is.infinite(W)] <- 0
-  print(W)
-
-  message("before 2:n loop")
-
-  for (i in 2:n) {
-    # Define Ci and Ai
-    r <- sample(J[i-1])
-    print("r:")
-    print(r)
-    print("SampleMatrix:")
-    print(SampleMatrix)
-    print("r[1:J[i]]:")
-    print(r[1:J[i]])
-    Ci <- SampleMatrix[r[1:J[i]], , drop = FALSE]
-    print("Ci:")
-    print(Ci)
-    OmegaNotCi <- setdiff(1:N, as.vector(Ci))
-    print("OmegaNotCi:")
-    print(OmegaNotCi)
-    r <- sample(length(OmegaNotCi))
-    Ai <- OmegaNotCi[r[1:J[i]]]
-    print("Ai:")
-    print(Ai)
-
-    #message("Calling cppLinearAssignment.")
-
-    CAi <- cbind(Ci, Ai)
-    print("dim CAi")
-    print(dim(CAi))
-
-    if(!is.numeric(Ci)){
-      message(Ci)
-      stop("Ci not numeric.")
-    }
-    if(!is.numeric(Ai)){
-      message(Ai)
-      stop("Ai not numeric.")
-    }
-    # Linear Assignment (assign Ai to Ci)
-    SampleMatrix <- pfdLinearAssignment(CAi, W, X, alpha, verbose)
-
-    # Update J, the number of points in C_i+1 and A_i+1
-    JJ <- max(1, min(J[i], floor(N / (i + 1))))
-    J <- c(J, JJ)
+  if (n < 1 || n >= N) {
+    stop("spbalDAS(doubleDAS) n must satisfy 1 <= n < nrow(pop).")
   }
-  return(SampleMatrix)
-}
-
-# Linear Assignment function
-pfdLinearAssignment <- function(SampleMatrix, W, X, alpha, verbose = FALSE) {
-  nSamples <- nrow(SampleMatrix)
-  n <- ncol(SampleMatrix)
-  Ci <- SampleMatrix[, 1:(n-1), drop = FALSE]
-  Ai <- SampleMatrix[, n]
-  # Cost matrix for assignment problem
-  SB <- matrix(0, nSamples, nSamples)
-  #C <- matrix(0, nSamples, nSamples)
-  for (i in 1:nSamples) {
-    #message("b4 ci:")
-    #message(C[i, ])
-    #message("b4 ai:")
-    #message(Ai)
-    #fred <- Ci[i, ] # save
-    SB[i, ] <- SBMoranIvec(as.vector(Ci[i, ]), as.vector(Ai), W)
-    #message("cppSBMoranIvec:")
-    #message(C[i, ])
-    #xxxx <- SBMoranIvec(Ci[i, ], Ai, W)
-    #message("SBMoranIvec:")
-    #message(xxxx)
+  if (!is.numeric(alpha) || length(alpha) != 1L || alpha < 0 || alpha > 1) {
+    stop("spbalDAS(doubleDAS) alpha must be a single number in [0, 1].")
   }
-  B <- matrix(0, nSamples, nSamples)
-  for (i in 1:nSamples) {
-    #for (ii in 1:length(X, 2)
-    #      b = sum(X(Ci[i]), ii)
-    for (ii in 1:ncol(X)) {
-      b <- sum(X[Ci[i, ], ii])
-      B[i, ] <- B[i, ] + (b + X[Ai, ii])^2
-    }
-  }
-  C = alpha*SB + (1-alpha)*B
 
-  # Solve assignment problem ===============================================
-  result = HungarianSolver(C)
-  #browser()
-  M = result$pairs
-  for (i in 1:nSamples)
-    #SampleMatrix(i,n) = Ai(M(M(:,1) == i,2));
-    SampleMatrix[i, n] <- Ai[ M[M[,1] == i, 2] ]
-
-
-  # Solve assignment problem
-  #M <- solve_LSAP(C, maximum = FALSE)
-  #M2 <- spbal:::LAPJV(C)
-  #M2 <- XXLAPJV(C)
-  #M <- M2$matching
-  #browser()
-
-  #for (i in 1:nSamples) {
-  #  SampleMatrix[i, n] <- Ai[M[i]]
-  #print("M[i]: ")
-  #print(M[i])
-  #}
-  return(SampleMatrix)
-}
-
-#SBMoranIvec function
-SBMoranIvec <- function(C, A, W) {
-  n <- length(C) + 1
-  # Compute measure
-  #message("W[C, C]:")
-  #message(W[C, C])
-  WCij <- sum(W[C, C])
-  #message("WCij:")
-  #message(WCij)
-
-  #print("W[A, C]:")
-  #print(W[A, C])
-
-  #print("W[C, A]:")
-  #print(W[C, A])
-
-  if (n == 2) {
-    MoranVec <- WCij + W[A, C] + W[C, A]
+  # MATLAB: J1 = min(floor(N/2), 500)
+  j_max <- max(2L, as.integer(N %/% 2L))
+  if (is.null(J1)) {
+    J1 <- min(500L, j_max)
   } else {
-    MoranVec <- WCij + rowSums(W[A, C]) + colSums(W[C, A])
+    J1 <- as.integer(J1)
   }
-  #message("MoranVec:")
-  #message(MoranVec)
-  return(MoranVec)
+  if (J1 < 2L) {
+    stop("spbalDAS(doubleDAS) J1 must be >= 2.")
+  }
+  if (J1 > j_max) {
+    if (verbose) {
+      message(sprintf("spbalDAS(doubleDAS) J1=%d exceeds floor(N/2)=%d; using %d.",
+                      J1, j_max, j_max))
+    }
+    J1 <- j_max
+  }
+  if (J1 > 500L) {
+    warning("spbalDAS(doubleDAS) J1 > 500; large assignment problems dominate run time. ",
+            "MATLAB caps J1 at 500. See Robertson, Price and Reale (2025, Environmetrics).")
+  }
+
+  if (is.null(cache_W)) {
+    cache_W <- (N <= 2500L)
+  }
+  cache_W <- isTRUE(cache_W)
+  if (cache_W && N > 4000L) {
+    warning(sprintf(
+      "spbalDAS(doubleDAS) cache_W=TRUE at N=%d stores an N x N matrix (~%.0f MiB) and is usually slower than cache_W=FALSE.",
+      N, 8 * N * N / (1024 * 1024)
+    ), call. = FALSE)
+  }
+
+  if (verbose) {
+    message(sprintf(
+      "[%s] Starting doubleDAS N=%d n=%d J1=%d alpha=%.3f cache_W=%s",
+      format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"),
+      N, n, J1, alpha, cache_W
+    ))
+  }
+
+  SampleMatrix <- DoubleAssignmentProblem_cpp(
+    pop = pop,
+    aux = aux,
+    alpha = as.numeric(alpha),
+    target_n = as.integer(n),
+    initial_J = as.integer(J1),
+    n_threads = as.integer(n_threads),
+    verbose = verbose,
+    cache_W = cache_W
+  )
+
+  if (verbose) {
+    message(sprintf("[%s] Finished doubleDAS.",
+                    format(Sys.time(), "%Y-%m-%d %H:%M:%OS3")))
+  }
+
+  attr(SampleMatrix, "spbal") <- "doubleDAS"
+  SampleMatrix
 }
 
-#Load necessary libraries
-
-#library(pracma) # For pdist2 function
-library(clue) # For solving linear assignment problem
-# Prepare for plotting
-library(ggplot2)
-library(reshape2)
-
-#Main function
-
-dist_al <- function(X) {
-  n <- nrow(X)
-  # Compute squared norms of rows: ||x_i||^2
-  G <- rowSums(X^2)  # Sum of squares along rows
-  # Compute D^2 = G + G^T - 2 * X * X^T
-  D <- -2 * (X %*% t(X))  # -2 * dot products
-  D <- sweep(D, 2, G, "+")  # Add G to each column
-  D <- sweep(D, 1, G, "+")  # Add G to each row
-  # Take square root and ensure non-negative values
-  D <- sqrt(abs(D))
-  return(D)
+#' Inverse-distance spread used by MATLAB SBMoranIvec.
+#'
+#' \code{2 * sum(W[A, C])} for each candidate in \code{A}. Kept for tests and
+#' for comparing against the C++ cost fill.
+#'
+#' @keywords internal
+SBMoranIvec <- function(C, A, W) {
+  as.numeric(2 * rowSums(W[A, C, drop = FALSE]))
 }
 
+#' MATLAB LinearAssignment balance term for one candidate sample.
+#'
+#' @keywords internal
+doubleDAS_balance_row <- function(Ci, Ai, X) {
+  b <- colSums(X[Ci, , drop = FALSE])
+  XA <- X[Ai, , drop = FALSE]
+  as.numeric(rowSums(sweep(XA, 2L, b, "+")^2))
+}
