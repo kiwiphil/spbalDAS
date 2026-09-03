@@ -64,10 +64,10 @@ DAS <- function(pop,
     stop("spbalDAS(DAS) J1 must be >= 2.")
   }
   if (J1 > j_max) {
-    if (verbose) {
+    #if (verbose) {
       message(sprintf("spbalDAS(DAS) J1=%d exceeds floor(N/2)=%d; using %d.",
                       J1, j_max, j_max))
-    }
+    #}
     J1 <- j_max
   }
   if (J1 > 500L) {
@@ -86,11 +86,11 @@ DAS <- function(pop,
     ), call. = FALSE)
   }
 
-  if (verbose) {
-    message(sprintf("[%s] Starting DAS N=%d n=%d J1=%d cache_W=%s n_threads=%s",
+  #if (verbose) {
+  message(sprintf("[%s] Starting DAS N=%d n=%d J1=%d cache_W=%s n_threads=%s",
                     format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"),
                     N, n, J1, cache_W, n_threads))
-  }
+  #}
 
   SampleMatrix <- LinearAssignmentProblem_cpp(
     pop = pop,
@@ -101,9 +101,9 @@ DAS <- function(pop,
     cache_W = cache_W
   )
 
-  if (verbose) {
-    message(sprintf("[%s] Finished DAS.", format(Sys.time(), "%Y-%m-%d %H:%M:%OS3")))
-  }
+  #if (verbose) {
+  message(sprintf("[%s] Finished DAS.", format(Sys.time(), "%Y-%m-%d %H:%M:%OS3")))
+  #}
 
   attr(SampleMatrix, "spbal") <- "DAS"
   SampleMatrix

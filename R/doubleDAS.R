@@ -87,10 +87,10 @@ doubleDAS <- function(pop,
     stop("spbalDAS(doubleDAS) J1 must be >= 2.")
   }
   if (J1 > j_max) {
-    if (verbose) {
+    #if (verbose) {
       message(sprintf("spbalDAS(doubleDAS) J1=%d exceeds floor(N/2)=%d; using %d.",
                       J1, j_max, j_max))
-    }
+    #}
     J1 <- j_max
   }
   if (J1 > 500L) {
@@ -109,13 +109,13 @@ doubleDAS <- function(pop,
     ), call. = FALSE)
   }
 
-  if (verbose) {
-    message(sprintf(
+  #if (verbose) {
+  message(sprintf(
       "[%s] Starting doubleDAS N=%d n=%d J1=%d alpha=%.3f cache_W=%s",
       format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"),
       N, n, J1, alpha, cache_W
     ))
-  }
+  #}
 
   SampleMatrix <- DoubleAssignmentProblem_cpp(
     pop = pop,
@@ -128,10 +128,10 @@ doubleDAS <- function(pop,
     cache_W = cache_W
   )
 
-  if (verbose) {
-    message(sprintf("[%s] Finished doubleDAS.",
+  #if (verbose) {
+  message(sprintf("[%s] Finished doubleDAS.",
                     format(Sys.time(), "%Y-%m-%d %H:%M:%OS3")))
-  }
+  #}
 
   attr(SampleMatrix, "spbal") <- "doubleDAS"
   SampleMatrix

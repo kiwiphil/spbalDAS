@@ -1,2 +1,6 @@
 *.html
 *.R
+*.qmd
+
+/.quarto/
+**/*.quarto_ipynb

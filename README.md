@@ -2,8 +2,6 @@
 
 R/C++ implementation of **Dynamic Assignment Sampling** (Robertson, Price and Reale 2024) for well-spread master samples over an auxiliary space.
 
-This tree includes the performance patches described in [`docs/performance-review.md`](docs/performance-review.md).
-
 ## Install
 
 ```r
@@ -41,14 +39,6 @@ dsamp <- doubleDAS(pop, aux, n = 25, alpha = 0.5)
 | `n_threads` | `1` | Parallel cost fill when \(J^2 i \ge 2048\). `0` uses every logical CPU. |
 | `verbose` | `FALSE` | Step timings (`fill=` vs `lapjv=`). |
 
-## What 0.1.1 changed
-
-1. Inverse distances are not built three times in R.
-2. The unused row-constant \(s_j^\top W s_j\) is dropped from the assignment cost.
-3. `J1` is optional and capped at \(N/2\).
-4. Jonker–Volgenant runs on the Armadillo buffer; `n_threads` / `verbose` are honoured.
-5. Assignment write-back uses the shuffled draw (correct \(\sigma\)).
-
 ## What 0.1.4 changed
 
 Assignment uses Kuhn–Munkres (Hungarian). The Jonker–Volgenant port
@@ -62,6 +52,14 @@ Prefer `cache_W = FALSE` when `N` is larger than a few thousand.
 ## What 0.1.2 changed
 
 `doubleDAS()` is a MATLAB-faithful port: \(\alpha SB + (1-\alpha)B\), using the DAS C++ loop and `native_lapjv` instead of `matchpairs`.
+
+## What 0.1.1 changed
+
+1. Inverse distances are not built three times in R.
+2. The unused row-constant \(s_j^\top W s_j\) is dropped from the assignment cost.
+3. `J1` is optional and capped at \(N/2\).
+4. Jonker–Volgenant runs on the Armadillo buffer; `n_threads` / `verbose` are honoured.
+5. Assignment write-back uses the shuffled draw (correct \(\sigma\)).
 
 ## References
 
