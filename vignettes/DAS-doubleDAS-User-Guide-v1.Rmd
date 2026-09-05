@@ -1,0 +1,239 @@
+---
+title: "DAS and doubleDAS User Guide"
+format: pdf
+editor: visual
+vignette: >
+  %\VignetteIndexEntry{DAS and doubleDAS User Guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# DAS
+
+## DAS Parameters
+
+The following DAS parameters define the population, the number of sample points to draw from the population and the maximum number of candidate samples.
+
+```{r}
+set.seed(2026)
+
+# Numeric matrix of population coordinates, one unit per row.
+# x points uniformly in [0,1)^2
+myPop <- matrix(runif(2000 * 2), ncol = 2)
+
+# The number of sample points to draw from the population.
+n <- 250
+
+# Maximum number of candidate samples, \code{2 <= J1 <= floor(N/2)}.
+# Default is \code{min(200, floor(N/2))}. Values above 500 are allowed but
+# trigger a warning (large assignment problems dominate run time).
+J1 <- 200
+```
+
+### Additional DAS Parameters
+
+The following are additional parameters supported by DAS.
+
+- n_threads
+  - Threads used when filling the cost matrix. A value of $0$ uses every logical CPU. Parallel fill runs only when the current $J$ is at least $256$ and $n\_threads$ is greater than $1$. Default is $1$.
+- verbose
+  - Print step timings. Default is FALSE.
+- cache_W
+  - If $TRUE$, build one $N \times N$ inverse-distance matrix in C++. If $FALSE$, compute inverse distances on the fly. Default is $TRUE$ when $N <= 8000$, otherwise $FALSE$.
+
+```{r}
+# Use all logical CPU's
+n_threads <- 0
+
+# Display step timings
+verbose <- TRUE
+
+# Build single inverse-distance matrix
+cache_W <- TRUE
+```
+
+## Generate Sample
+
+Call DAS to generate the sample.
+
+```{r}
+library(spbalDAS)
+
+sampleMatrix <- DAS(pop = myPop,
+                    n = n, 
+                    J1 = J1, 
+                    n_threads = n_threads, 
+                    verbose = verbose,
+                    cache_W = cache_W)
+```
+
+Show first candidate sample.
+
+```{r}
+# first candidate sample
+s <- sampleMatrix[1,]
+s
+```
+
+Plot the sample.
+
+```{R}
+library(reshape2)
+library(ggplot2)
+
+# plotting...
+index_matrix <- sampleMatrix # leave sampleMatrix intact
+df <- myPop
+
+# Melt the matrix into long format to map indices to colors
+index_long <- melt(index_matrix)
+colnames(index_long) <- c("row", "col", "index")
+
+# Merge the matrix data with the dataframe coordinates
+plot_data <- merge(index_long, df, by.x = "index", by.y = "row.names")
+
+# Create a color column for the row groups of the matrix
+plot_data$color_group <- ifelse(plot_data$row == 1, "red", "black")
+
+# Dynamic title using the actual values of n and number of locations
+n_value <- n
+n_locations <- length(myPop) / 2
+
+# Plot the points - BLACK drawn first, RED on top (guaranteed layering)
+ggplot(plot_data, aes(x = V1, y = V2, color = color_group)) +
+  # Black points (bottom layer)
+  geom_point(data = plot_data[plot_data$color_group == "black", ],
+             size = 3) +
+  # Red points (top layer - drawn after black)
+  geom_point(data = plot_data[plot_data$color_group == "red", ],
+             size = 3) +
+  scale_color_manual(values = c("black" = "black", "red" = "red")) +
+  theme_minimal() +
+  labs(color = "Matrix Row Group",
+       title = paste0("DAS Sample of n = ", n_value,
+                      " from ", n_locations, " Locations, J1=", J1),
+       caption = "First row colored in RED.") +
+  xlab("X Coordinate") +
+  ylab("Y Coordinate")
+```
+
+# doubleDAS
+
+## doubleDAS Parameters
+
+The following doubleDAS parameters define the population, the auxiliary varaibles, the number of sample points to draw from the population, the mixing parameter and the maximum number of candidate samples.
+
+```{r}
+set.seed(2026)
+
+# Numeric matrix of population coordinates, one unit per row.
+# x points uniformly in [0,1)^2
+myPop <- matrix(runif(2000 * 2), ncol = 2)
+
+# Numeric matrix of auxiliary variables, one row per unit.
+myAux <- matrix(runif(2000 * 2), ncol = 2)
+myAux <- myAux / sqrt(rowSums(myAux^2)) 
+
+# The number of sample points to draw from the population.
+n <- 150
+
+# Mix in [0, 1]. Default 0.5.
+alpha <- 0.5
+
+# Maximum number of candidate samples, \code{2 <= J1 <= floor(N/2)}.
+# Default is \code{min(200, floor(N/2))}. Values above 500 are allowed but
+# trigger a warning (large assignment problems dominate run time).
+J1 <- 200
+```
+
+### Additional doubleDAS Parameters
+
+The following are additional parameters supported by DAS.
+
+- n_threads
+  - Threads used when filling the cost matrix. A value of $0$ uses every logical CPU. Parallel fill runs only when the current $J$ is at least $256$ and $n\_threads$ is greater than $1$. Default is $1$.
+- verbose
+  - Print step timings. Default is FALSE.
+- cache_W
+  - If $TRUE$, build one $N \times N$ inverse-distance matrix in C++ when $alpha > 0$. If $FALSE$, compute inverse distances on the fly. Default is $TRUE$ when $N <= 2500$, otherwise $FALSE$. At large $N$ this is usually slower than on-the-fly distances.
+
+```{r}
+# Use all logical CPU's
+n_threads <- 0
+
+# Display step timings
+verbose <- TRUE
+
+# Build single inverse-distance matrix
+cache_W <- TRUE
+```
+
+## Generate Sample
+
+Call doubleDAS to generate the sample.
+
+```{r}
+library(spbalDAS)
+
+sampleMatrix <- doubleDAS(pop = myPop,
+                          aux = myAux,
+                          n = n,
+                          alpha = alpha,
+                          J1 = J1, 
+                          n_threads = n_threads, 
+                          verbose = verbose,
+                          cache_W = cache_W)
+```
+
+Show first candidate sample.
+
+```{r}
+# first candidate sample
+s <- sampleMatrix[1,]
+s
+```
+
+Plot the sample.
+
+```{R}
+library(reshape2)
+library(ggplot2)
+
+# plotting...
+index_matrix <- sampleMatrix # leave sampleMatrix intact
+df <- myPop
+
+# Melt the matrix into long format to map indices to colors
+index_long <- melt(index_matrix)
+colnames(index_long) <- c("row", "col", "index")
+
+# Merge the matrix data with the dataframe coordinates
+plot_data <- merge(index_long, df, by.x = "index", by.y = "row.names")
+
+# Create a color column for the row groups of the matrix
+plot_data$color_group <- ifelse(plot_data$row == 1, "red", "black")
+
+# Dynamic title using the actual values of n and number of locations
+n_value <- n
+n_locations <- length(myPop) / 2
+
+# Plot the points, colored by the row group of the matrix
+ggplot(plot_data, aes(x = V1, y = V2, color = color_group)) +
+  # Black points (bottom layer)
+  geom_point(data = plot_data[plot_data$color_group == "black", ],
+             size = 3) +
+  # Red points (top layer - drawn after black)
+  geom_point(data = plot_data[plot_data$color_group == "red", ],
+             size = 3) +
+  scale_color_manual(values = c("black" = "black", "red" = "red")) +
+  theme_minimal() +
+  labs(color = "Matrix Row Group",
+       title = paste0("doubleDAS Sample of n = ", n_value,
+                      " from ", n_locations, " Locations, J1=", J1),
+       subtitle = paste0("alpha=", alpha, "."),
+       caption = "First row colored in RED.") +
+  xlab("X Coordinate") +
+  ylab("Y Coordinate")
+```
+
+## The End

@@ -18,7 +18,6 @@ LinkingTo:
     RcppArmadillo,
     RcppThread
 LazyData: true
-RoxygenNote: 7.3.3
 SystemRequirements: C++17
 Suggests: 
     knitr,
@@ -26,7 +25,9 @@ Suggests:
     testthat (>= 3.0.0),
     bookdown,
     ggplot2,
-    gridExtra
+    gridExtra,
+    reshape2
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://kiwiphil.github.io/spbalDAS/
+Config/roxygen2/version: 8.1.0

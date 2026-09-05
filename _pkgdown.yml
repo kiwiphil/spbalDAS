@@ -1,20 +1,4 @@
 url: https://kiwiphil.github.io/spbalDAS/
 template:
   bootstrap: 5
-reference:
-- title: spbalDAS
-- subtitle: Spatial Functions
-  desc: User callable spatial design functions.
-- contents:
-  - starts_with("DAS")
-  - starts_with("SolveLinearAssignment")
-  - starts_with("rSBMoranIvec")
-  - starts_with("Double")
-  - starts_with("Linear")
-  - starts_with("double")
-- subtitle: Support Functions
-  desc: User callable support functions.
-- contents:
-  - starts_with("arma")
-  - starts_with("native")
 
