@@ -60,8 +60,8 @@ re-written in R/C++ by Phil Davies.
 set.seed(511)
 pop <- matrix(runif(200), ncol = 2)
 sampMx <- DAS(pop = pop, n = 15)
-#> [2026-09-03 21:54:00.126] Starting DAS N=100 n=15 J1=50 cache_W=TRUE n_threads=1
-#> [2026-09-03 21:54:00.127] Finished DAS.
+#> [2026-09-05 04:33:19.822] Starting DAS N=100 n=15 J1=50 cache_W=TRUE n_threads=1
+#> [2026-09-05 04:33:19.823] Finished DAS.
 sampMx[1:3, ]
 #>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13] [,14]
 #> [1,]   14   18   34   86   62   78   38   10   68    47    27    61    35    31

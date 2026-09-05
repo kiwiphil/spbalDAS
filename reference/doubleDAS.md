@@ -84,8 +84,8 @@ set.seed(511)
 pop <- matrix(runif(200), ncol = 2)
 aux <- matrix(runif(300), ncol = 3)
 samp <- doubleDAS(pop, aux, n = 12, alpha = 0.5)
-#> [2026-09-03 21:54:00.719] Starting doubleDAS N=100 n=12 J1=50 alpha=0.500 cache_W=TRUE
-#> [2026-09-03 21:54:00.720] Finished doubleDAS.
+#> [2026-09-05 04:33:20.408] Starting doubleDAS N=100 n=12 J1=50 alpha=0.500 cache_W=TRUE
+#> [2026-09-05 04:33:20.409] Finished doubleDAS.
 samp[1, ]
 #>  [1]  42  43  50  98  61 100  91  54  56   8  77  30
 ```

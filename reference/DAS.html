@@ -22,6 +22,10 @@ are a size-k DAS sample."></head><body>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/DAS-doubleDAS-User-Guide-v1.html">DAS and doubleDAS User Guide</a></li>
+  </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
       </ul></div>
@@ -100,8 +104,8 @@ in R/C++ by Phil Davies.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">511</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">pop</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">200</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">sampMx</span> <span class="op">&lt;-</span> <span class="fu">DAS</span><span class="op">(</span>pop <span class="op">=</span> <span class="va">pop</span>, n <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> [2026-09-03 21:54:00.126] Starting DAS N=100 n=15 J1=50 cache_W=TRUE n_threads=1</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> [2026-09-03 21:54:00.127] Finished DAS.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> [2026-09-05 04:33:19.822] Starting DAS N=100 n=15 J1=50 cache_W=TRUE n_threads=1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> [2026-09-05 04:33:19.823] Finished DAS.</span>
 <span class="r-in"><span><span class="va">sampMx</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, <span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13] [,14]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1,]   14   18   34   86   62   78   38   10   68    47    27    61    35    31</span>
